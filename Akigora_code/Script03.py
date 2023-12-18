@@ -85,7 +85,9 @@ def rh_page():
         ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
         st.pyplot(fig)
 
+
     if selected_visualization == "Evolution des inscriptions":
+
         # Ensure the 'Created' column is of datetime type
         DFexp3['Created'] = pd.to_datetime(DFexp3['Created'])
 
@@ -108,6 +110,7 @@ def rh_page():
         DFgrouped = pd.DataFrame(Expert_grouped)
         counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
         cumulative_counts_by_interval = counts_by_interval.cumsum()
+        
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
         # Tracer le premier graphique (cumulatif)
@@ -123,9 +126,8 @@ def rh_page():
         axs[1].set_xlabel('Tranche de 6 mois')
         axs[1].set_ylabel('Nombre d\'experts')
         axs[1].tick_params(axis='x', rotation=45)
-           
 
-        #filters_date = start_date >= selected_date_range[0]&end_date <= selected_date_range[1]    
+      
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
          # Tracer le premier graphique (cumulatif)
         axs[0].plot(cumulative_counts_by_interval.index, cumulative_counts_by_interval.values, linestyle='-', color='b', marker='o')
