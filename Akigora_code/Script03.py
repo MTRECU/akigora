@@ -34,13 +34,7 @@ def rh_page():
     DFexp3 = DFexp2
     DFexp3 = DFexp3.dropna(subset=['Created'])
     DFexp3 = DFexp3.sort_values(by='Created', ascending=True)
-    Expert_grouped = DFexp3.groupby('Created').size()
-    DFgrouped = pd.DataFrame(Expert_grouped)
-    counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
-    cumulative_counts_by_interval = counts_by_interval.cumsum()
 
-    start_date = DFexp3['Created'].min()
-    end_date = DFexp3['Created'].max()
 
     Nb_experts = DFexp0.shape[0]
 
@@ -59,6 +53,17 @@ def rh_page():
     Domains_grouped_sorted = Domains_grouped.sort_values(ascending=False)
     Domains_prct = round((DFexp0['domains'].dropna().value_counts(normalize=True)*100), 2)
 
+    Localisation = DFexp0['location'].unique()
+    DFexp1 = DFexp0
+    DFexp1['location'] = DFexp1['location'].str.split().str.get(0)
+    DFexp1['location'] = DFexp1['location'].str.replace(',','')
+    
+    Ville_grouped = DFexp1.groupby('location').size()
+    Ville_grouped_sorted = Ville_grouped.sort_values(ascending=False)
+    Top_10_villes = Ville_grouped_sorted.head(10)
+    Pourcentage_ville = round((DFexp1['location'].dropna().value_counts(normalize=True)*100), 2)
+    pourcent_Top_10_villes = Pourcentage_ville.head(10)
+
     # Définir les couleurs
     couleur_info_box = "#87CEEB"  # Ciel léger
     couleur_card = "#F0FFFF"  # Azur clair
@@ -66,9 +71,9 @@ def rh_page():
     # Afficher les informations avec des éléments visuels
     st.info("### Statistiques des experts sur la plateforme")
     # Sélection de la visualisation
-    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Visualisation 1", "Visualisation 2", "Visualisation 3"])
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Niveau de completion du formulaire", "Evolution des inscriptions", "Localisation de nos experts"])
     # Affichage du nombre d'experts inscrits
-    if selected_visualization == "Visualisation 1":
+    if selected_visualization == "Niveau de completion du formulaire":
         st.info(f"Nombre d'experts inscrits : {DFexp1.shape[0]}")
         # Affichage du nombre d'experts visibles
         st.success(f"Nombre d'experts visibles : {sum(DFexp0['visible']==1.0)}")
@@ -76,11 +81,33 @@ def rh_page():
         # Diagramme circulaire pour illustrer le pourcentage de profils remplis
         fig, ax = plt.subplots(figsize=(2, 2))  # Taille réduite
         colors = ['#02A865', '#A4d1AE']  # couleur akigora
-        ax.pie([prct_profil_remplis, 100 - prct_profil_remplis], labels=['Remplis à 100%', 'Non remplis à 100%'], autopct='%1.1f%%', startangle=90, colors=colors)
+        ax.pie([prct_profil_remplis, 100 - prct_profil_remplis], labels=['Formulaire remplis à 100%', 'Formulaire non remplis à 100%'], autopct='%1.1f%%', startangle=90, colors=colors)
         ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
         st.pyplot(fig)
 
-    if selected_visualization == "Visualisation 2":
+    if selected_visualization == "Evolution des inscriptions":
+        # Ensure the 'Created' column is of datetime type
+        DFexp3['Created'] = pd.to_datetime(DFexp3['Created'])
+
+        # Convert datetime values to Unix timestamps
+
+        start_date = DFexp3['Created'].min().date()
+        end_date = DFexp3['Created'].max().date()
+
+        selected_date_range = st.slider("Select a date range", min_value=start_date, max_value=end_date, value=(start_date, end_date))
+
+        # Convert selected Unix timestamps back to datetime objects
+        selected_start_date = pd.to_datetime(selected_date_range[0])
+        selected_end_date = pd.to_datetime(selected_date_range[1])
+
+        # Filter the DataFrame based on the selected date range
+        filtered_df = DFexp3[(DFexp3['Created'] >= selected_start_date) & (DFexp3['Created'] <= selected_end_date)]
+
+        # Perform grouping and counting operations on the filtered DataFrame
+        Expert_grouped = filtered_df.groupby('Created').size()
+        DFgrouped = pd.DataFrame(Expert_grouped)
+        counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
+        cumulative_counts_by_interval = counts_by_interval.cumsum()
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
         # Tracer le premier graphique (cumulatif)
@@ -97,12 +124,8 @@ def rh_page():
         axs[1].set_ylabel('Nombre d\'experts')
         axs[1].tick_params(axis='x', rotation=45)
            
-        selected_date_range = st.slider('**Sélectionner la plage de dates**',
-                                            min_value=start_date.timestamp(),
-                                            max_value=end_date.timestamp(),
-                                            value=(start_date, end_date),
-                                            format="YYYY/MM/DD")
-           #filters_date = start_date >= selected_date_range[0]&end_date <= selected_date_range[1]    
+
+        #filters_date = start_date >= selected_date_range[0]&end_date <= selected_date_range[1]    
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
          # Tracer le premier graphique (cumulatif)
         axs[0].plot(cumulative_counts_by_interval.index, cumulative_counts_by_interval.values, linestyle='-', color='b', marker='o')
@@ -117,6 +140,27 @@ def rh_page():
         axs[1].set_ylabel('Nombre d\'experts')
         axs[1].tick_params(axis='x', rotation=45)  # Rotation des dates pour une meilleure lisibilité
         st.pyplot(fig)
+
+    if selected_visualization == "Localisation de nos experts":
+        
+        # Sélection de la ville parmi le top 10, triées par ordre alphabétique
+        selected_city = st.selectbox("Sélectionnez une ville :", Top_10_villes.sort_index().index)
+
+        # Filtrer les données en fonction de la ville sélectionnée
+        filtered_data = DFexp1[DFexp1['location'] == selected_city]
+
+        # Calculer le pourcentage des domaines pour la ville sélectionnée
+        domains_percent_city = (filtered_data['domains'].value_counts(normalize=True) * 100).round(2)
+
+        # Créer et afficher l'histogramme
+        st.bar_chart(domains_percent_city, color='#02A865')
+        st.set_option('deprecation.showPyplotGlobalUse', False)
+        st.pyplot().update_layout(xaxis_tickangle=-45)
+        st.pyplot().update_xaxes(title_text='Domaines')
+        st.pyplot().update_yaxes(title_text='Pourcentage')
+        st.pyplot().update_layout(title_text=f'Répartition des domaines pour la ville : {selected_city}')
+
+
 
 
 
@@ -205,7 +249,7 @@ def home_page():
 def main():
     st.sidebar.title("Menu")
     pages = ["Accueil", "RH", "Marketing", "Technique", "Direction", "Commerce"]
-    selected_page = st.sidebar.selectbox("Sélectionnez une page", pages)
+    selected_page = st.sidebar.selectbox("Sélectionnez un département", pages)
 
     if selected_page == "Accueil":
         home_page()
