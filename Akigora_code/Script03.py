@@ -34,13 +34,11 @@ def rh_page():
     DFexp3 = DFexp2
     DFexp3 = DFexp3.dropna(subset=['Created'])
     DFexp3 = DFexp3.sort_values(by='Created', ascending=True)
-    Expert_grouped = DFexp3.groupby('Created').size()
-    DFgrouped = pd.DataFrame(Expert_grouped)
-    counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
-    cumulative_counts_by_interval = counts_by_interval.cumsum()
+    
 
-    start_date = DFexp3['Created'].min()
-    end_date = DFexp3['Created'].max()
+    
+
+
 
     Nb_experts = DFexp0.shape[0]
 
@@ -81,6 +79,30 @@ def rh_page():
         st.pyplot(fig)
 
     if selected_visualization == "Visualisation 2":
+
+        # Ensure the 'Created' column is of datetime type
+        DFexp3['Created'] = pd.to_datetime(DFexp3['Created'])
+
+        # Convert datetime values to Unix timestamps
+
+        start_date = DFexp3['Created'].min().date()
+        end_date = DFexp3['Created'].max().date()
+
+        selected_date_range = st.slider("Select a date range", min_value=start_date, max_value=end_date, value=(start_date, end_date))
+
+        # Convert selected Unix timestamps back to datetime objects
+        selected_start_date = pd.to_datetime(selected_date_range[0])
+        selected_end_date = pd.to_datetime(selected_date_range[1])
+
+        # Filter the DataFrame based on the selected date range
+        filtered_df = DFexp3[(DFexp3['Created'] >= selected_start_date) & (DFexp3['Created'] <= selected_end_date)]
+
+        # Perform grouping and counting operations on the filtered DataFrame
+        Expert_grouped = filtered_df.groupby('Created').size()
+        DFgrouped = pd.DataFrame(Expert_grouped)
+        counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
+        cumulative_counts_by_interval = counts_by_interval.cumsum()
+
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
         # Tracer le premier graphique (cumulatif)
@@ -96,13 +118,9 @@ def rh_page():
         axs[1].set_xlabel('Tranche de 6 mois')
         axs[1].set_ylabel('Nombre d\'experts')
         axs[1].tick_params(axis='x', rotation=45)
+
+       
            
-        selected_date_range = st.slider('**Sélectionner la plage de dates**',
-                                            min_value=start_date.timestamp(),
-                                            max_value=end_date.timestamp(),
-                                            value=(start_date, end_date),
-                                            format="YYYY/MM/DD")
-           #filters_date = start_date >= selected_date_range[0]&end_date <= selected_date_range[1]    
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
          # Tracer le premier graphique (cumulatif)
         axs[0].plot(cumulative_counts_by_interval.index, cumulative_counts_by_interval.values, linestyle='-', color='b', marker='o')
