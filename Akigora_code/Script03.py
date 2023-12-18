@@ -36,7 +36,6 @@ def rh_page():
     DFexp3 = DFexp3.sort_values(by='Created', ascending=True)
     Expert_grouped = DFexp3.groupby('Created').size()
     DFgrouped = pd.DataFrame(Expert_grouped)
-    st.write(DFgrouped)
     counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
     cumulative_counts_by_interval = counts_by_interval.cumsum()
 
@@ -149,7 +148,8 @@ def home_page():
         "Commerce": "💼"
     }
     def logo():
-        image_path = "C:\\Users\\simplon\\Desktop\\Projet_Akigora\\Akigora_code\\Logo_Akigora.png"
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.join(script_directory, 'Logo_Akigora.png')
         original_image = Image.open(image_path)
         st.image(original_image, width=500, caption="")
     
