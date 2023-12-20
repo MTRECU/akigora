@@ -110,24 +110,9 @@ def rh_page():
         DFgrouped = pd.DataFrame(Expert_grouped)
         counts_by_interval = DFgrouped.groupby(pd.Grouper(freq='6M')).size()
         cumulative_counts_by_interval = counts_by_interval.cumsum()
-        
-        fig, axs = plt.subplots(1, 2, figsize=(15, 6))
+           
 
-        # Tracer le premier graphique (cumulatif)
-        axs[0].plot(cumulative_counts_by_interval.index, cumulative_counts_by_interval.values, linestyle='-', color='b', marker='o')
-        axs[0].set_title('Évolution cumulatif du nombre d\'experts')
-        axs[0].set_xlabel('Tranche de 6 mois')
-        axs[0].set_ylabel('Nombre d\'experts')
-        axs[0].tick_params(axis='x', rotation=45)  # Rotation des dates pour une meilleure lisibilité
-
-        # Tracer le deuxième graphique (non cumulatif)
-        axs[1].plot(counts_by_interval.index, counts_by_interval.values, linestyle='-', color='r', marker='o')
-        axs[1].set_title('Évolution non cumulatif du nombre d\'experts')
-        axs[1].set_xlabel('Tranche de 6 mois')
-        axs[1].set_ylabel('Nombre d\'experts')
-        axs[1].tick_params(axis='x', rotation=45)
-
-      
+        #filters_date = start_date >= selected_date_range[0]&end_date <= selected_date_range[1]    
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
          # Tracer le premier graphique (cumulatif)
         axs[0].plot(cumulative_counts_by_interval.index, cumulative_counts_by_interval.values, linestyle='-', color='b', marker='o')
@@ -167,8 +152,32 @@ def rh_page():
 
 
 def marketing_page():
-    st.title("Département Marketing")
-    # Votre contenu pour le département Marketing ici
+    st.info("### Statistiques pour le département Marketing")
+    # Sélection de la visualisation
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les Newsletters", "2", "3"])
+    # Affichage du nombre d'experts inscrits
+    if selected_visualization == "Les Newsletters":
+        st.title("Qui sont nos abonnés")
+        # Votre contenu pour le département Marketing ici
+        # Charger les données de la newsletter
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+        DFnewsletter = pd.read_excel(excel_file_path, sheet_name='Collection newsletter')  # Remplacez 'newsletter' par le nom réel de votre feuille
+
+        # Calculer la répartition des types d'inscrits
+        type_counts = DFnewsletter['type'].value_counts()
+
+        # Créer un diagramme en tarte
+        fig, ax = plt.subplots(figsize=(1, 1)) 
+        colors = ['#02A865', '#A4d1AE']
+        ax.pie(type_counts, labels=type_counts.index, autopct='%1.1f%%', startangle=90, colors=colors, textprops={'fontsize': 4})
+        ax.axis('equal')  
+        st.pyplot(fig)
+    if selected_visualization == "2":
+        st.write('Visualisations a venir')
+
+    if selected_visualization == "3":
+        st.write('Visualisations a venir')
 
 def technique_page():
     st.title("Département Technique")
