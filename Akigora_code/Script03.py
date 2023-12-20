@@ -152,6 +152,7 @@ def rh_page():
 
 
 def marketing_page():
+    st.title("Datavisualisation du Département Marketing")
     st.info("### Statistiques pour le département Marketing")
     # Sélection de la visualisation
     selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les Newsletters", "2", "3"])
@@ -180,15 +181,68 @@ def marketing_page():
         st.write('Visualisations a venir')
 
 def technique_page():
-    st.title("Département Technique")
+    st.title("Datavisualisation du Département Technique")
+    st.info("### Statistiques pour le Département Technique")
     # Votre contenu pour le département Technique ici
 
 def direction_page():
-    st.title("Département Direction")
-    # Votre contenu pour le département Direction ici
+    st.title("Datavisualisation du Département Diréction")
+    st.info("### Statistiques pour le Département Diréction")
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les prix", "2", "3"])
+    # Affichage du nombre d'experts inscrits
+    if selected_visualization == "Les prix":
+        st.title("Le prix de nos experts")
+        
+        # Charger les données et calculer les prix moyens
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+        DFprofil_expert = pd.read_excel(excel_file_path, sheet_name='Collection profile (type expert') 
+        DFprofil_expert['daily_prices_avg'] = (DFprofil_expert['daily_hourly_prices.daily_price_min'] + DFprofil_expert['daily_hourly_prices.daily_price_max']) / 2
+        DFprofil_expert['hourly_prices_avg'] = (DFprofil_expert['daily_hourly_prices.hourly_price_min'] + DFprofil_expert['daily_hourly_prices.hourly_price_max']) / 2
+        DFprofil_expert['studyLevel'] = DFprofil_expert['studyLevel'].replace({'Bac +5': 'Bac + 5', 'Bac5': 'Bac + 5', 'Bac3': 'Bac + 3', 'Bac8': 'Bac + 8', 'Bac4': 'Bac + 4', 'Bac2': 'Bac + 2'})
+        DFprofil_clean = DFprofil_expert.dropna(subset=['studyLevel', 'daily_prices_avg', 'hourly_prices_avg'])
+
+        # Sélection et filtrage par niveau d'étude
+        levels = sorted(DFprofil_clean['studyLevel'].unique())
+        selected_level = st.selectbox("Sélectionnez le niveau d'étude :", levels)
+        filtered_data = DFprofil_clean[DFprofil_clean['studyLevel'] == selected_level]
+
+        # Calculer les prix moyens pour le niveau d'étude sélectionné
+        avg_daily_price = filtered_data['daily_prices_avg'].mean()
+        avg_hourly_price = filtered_data['hourly_prices_avg'].mean()
+
+        # Affichage esthétique des prix moyens
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"<div style='background-color:#cdf4fa; padding:10px; border-radius:10px; text-align:center; color:white;'><h2>Prix moyen journalier</h2><h3>€{avg_daily_price:.2f}</h3></div>", unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"<div style='background-color:#cdf4fa; padding:10px; border-radius:10px; text-align:center; color:white;'><h2>Prix moyen par heure</h2><h3>€{avg_hourly_price:.2f}</h3></div>", unsafe_allow_html=True)
+
+        # Préparer les données pour les visualisations
+        daily_prices = filtered_data['daily_prices_avg']
+        hourly_prices = filtered_data['hourly_prices_avg']
+
+        # Créer les graphiques
+        fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+
+        # Graphique pour les prix moyens journaliers
+        sns.boxplot(y=daily_prices, ax=axs[0], color ='#9a02c6')
+        axs[0].set_title('Prix moyens journaliers')
+        axs[0].set_ylabel('Prix (€)')
+        
+        # Graphique pour les prix moyens horaires
+        sns.boxplot(y=hourly_prices, ax=axs[1], color ='#9a02c6')
+        axs[1].set_title('Prix moyens horaires')
+        axs[1].set_ylabel('Prix (€)')
+
+        # Afficher les graphiques
+        st.pyplot(fig)
+
+    
 
 def commerce_page():
-    st.title("Département Commerce")
+    st.title("Datavisualisation du Département Commerce")
+    st.info("### Statistiques pour le Département Commerce")
     # Votre contenu pour le département Commerce ici
 
 
