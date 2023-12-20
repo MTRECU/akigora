@@ -8,6 +8,13 @@ from PIL import Image
 import os
 from streamlit.components.v1 import html
 from streamlit_extras.switch_page_button import switch_page
+import plotly.express as px
+import folium
+from geopy.geocoders import Nominatim
+from geopy.extra.rate_limiter import RateLimiter
+from geopy.exc import GeocoderTimedOut
+from geopy.geocoders import options
+import certifi
 
 def rh_page():
     st.title("Datavisualisation du Département RH")
@@ -154,7 +161,7 @@ def rh_page():
 def marketing_page():
     st.info("### Statistiques pour le département Marketing")
     # Sélection de la visualisation
-    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les Newsletters", "2", "3"])
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les Newsletters", "How We Met", "3"])
     # Affichage du nombre d'experts inscrits
     if selected_visualization == "Les Newsletters":
         st.title("Qui sont nos abonnés")
@@ -173,8 +180,31 @@ def marketing_page():
         ax.pie(type_counts, labels=type_counts.index, autopct='%1.1f%%', startangle=90, colors=colors, textprops={'fontsize': 4})
         ax.axis('equal')  
         st.pyplot(fig)
-    if selected_visualization == "2":
-        st.write('Visualisations a venir')
+    if selected_visualization == "How We Met":
+        st.title("How We Met")
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+        dfpro = pd.read_excel(excel_file_path, sheet_name='Collection profile (type compan')
+        dfprofile = pd.DataFrame(dfpro)
+        # Group by "howWeMet" and calculate the percentage
+        dfprofile = dfprofile['howWeMet'].value_counts(normalize=True).reset_index()
+        dfprofile.columns = ['howWeMet', 'Percentage']
+
+        # Convert the percentage to percentage format
+        dfprofile['Percentage'] = dfprofile['Percentage'] * 100
+
+        # Create a pie chart
+        fig, ax = plt.subplots()
+        ax.pie(dfprofile['Percentage'], labels=dfprofile['howWeMet'], autopct='%1.1f%%', startangle=25, colors=plt.cm.Paired.colors, textprops={'fontsize': 6})
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+        # Display the pie chart in Streamlit
+ 
+        st.pyplot(fig)
+
+
+
+
 
     if selected_visualization == "3":
         st.write('Visualisations a venir')
@@ -186,6 +216,77 @@ def technique_page():
 def direction_page():
     st.title("Département Direction")
     # Votre contenu pour le département Direction ici
+    st.info("### Statistiques pour le département Direction")
+    # Sélection de la visualisation
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Nombre d'interventions", "Nombre d'heures", "Localisation"])
+    # Affichage du nombre d'experts inscrits
+    if selected_visualization == "Nombre d'interventions":
+        st.title("Nombre d'interventions")
+        # Votre contenu pour le département Marketing ici
+        # Charger les données de la newsletter
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+        dfInt = pd.read_excel(excel_file_path, sheet_name='Collection intervention')  # Remplacez 'newsletter' par le nom réel de votre feuille
+    
+    if selected_visualization == "Nombre d'heures":
+        st.title("Nombre d'heures")
+        # Votre contenu pour le département Marketing ici
+
+    
+    if selected_visualization == "Localisation":
+
+
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+        DFInt = pd.read_excel(excel_file_path, sheet_name='Collection intervention')  #
+        st.title("localisation")
+        # Votre contenu pour le département Marketing ici
+        
+        dfInt=pd.DataFrame(DFInt)
+
+        # Clean up names of the cities and remove the second word
+    
+        dfInt['clean_location'] = dfInt['localisation'].apply(lambda x: ' '.join(str(x).split()[:1]) if pd.notna(x) else '')
+
+        # Create a new column with the sum of IDs grouped by the cities
+        df_grouped_card = dfInt.groupby('clean_location')['_id'].sum().reset_index()
+        df_grouped_card = df_grouped_card.rename(columns={'clean_location': 'City', '_id': 'Total IDs'})
+
+        # Set the path to the Certifi certificate bundle
+        certifi_path = certifi.where()
+       
+
+        # Disable SSL verification
+    
+        # Configure geocoder with SSL verification disabled
+        geolocator = Nominatim(user_agent="city_coordinates", scheme="http", ssl_cafile=certifi_path)
+
+
+        # Create a folium map
+        map_center = [46.6031, 1.7394]  # Center coordinates of France
+        france_map = folium.Map(location=map_center, zoom_start=6)
+
+        # Add markers for each city with the number of IDs
+        for index, row in df_grouped_card.iterrows():
+            try:
+                location = geolocator.geocode(row['City'] + ', France', timeout=10)
+                if location:
+                    folium.Marker(
+                        location=[location.latitude, location.longitude],
+                        popup=f"{row['City']}: {row['Total IDs']} IDs",
+                        icon=folium.Icon(color='blue')
+                    ).add_to(france_map)
+            except GeocoderTimedOut as e:
+                st.warning(f"Error geocoding {row['City']}: {e}")
+
+
+        # Streamlit app
+        st.title('Map of France with IDs')
+        st.write("This map displays the number of IDs in each city of France.")
+        st.write(france_map._repr_html_(), unsafe_allow_html=True)
+
+
+
 
 def commerce_page():
     st.title("Département Commerce")
