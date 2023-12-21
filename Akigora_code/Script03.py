@@ -8,6 +8,9 @@ from PIL import Image
 import os
 from streamlit.components.v1 import html
 from streamlit_extras.switch_page_button import switch_page
+import json
+import folium
+from streamlit_folium import folium_static
 
 def rh_page():
     st.title("Datavisualisation du Département RH")
@@ -116,15 +119,15 @@ def rh_page():
         fig, axs = plt.subplots(1, 2, figsize=(15, 6))
          # Tracer le premier graphique (cumulatif)
         axs[0].plot(cumulative_counts_by_interval.index, cumulative_counts_by_interval.values, linestyle='-', color='b', marker='o')
-        axs[0].set_title('Évolution cumulatif du nombre d\'experts')
-        axs[0].set_xlabel('Tranche de 6 mois')
-        axs[0].set_ylabel('Nombre d\'experts')
+        axs[0].set_title('Évolution cumulatif du nombre d\'experts', fontsize=20)
+        axs[0].set_xlabel('Evolution semestrielle', fontsize=15)
+        axs[0].set_ylabel('Nombre d\'experts', fontsize=15)
         axs[0].tick_params(axis='x', rotation=45)  # Rotation des dates pour une meilleure lisibilité
         # Tracer le deuxième graphique (non cumulatif)
         axs[1].plot(counts_by_interval.index, counts_by_interval.values, linestyle='-', color='r', marker='o')
-        axs[1].set_title('Évolution non cumulatif du nombre d\'experts')
-        axs[1].set_xlabel('Tranche de 6 mois')
-        axs[1].set_ylabel('Nombre d\'experts')
+        axs[1].set_title('Évolution non cumulatif du nombre d\'experts', fontsize=20)
+        axs[1].set_xlabel('Evolution semestrielle', fontsize=15)
+        axs[1].set_ylabel('Nombre d\'experts', fontsize=15)
         axs[1].tick_params(axis='x', rotation=45)  # Rotation des dates pour une meilleure lisibilité
         st.pyplot(fig)
 
@@ -149,13 +152,11 @@ def rh_page():
 
 
 
-
-
 def marketing_page():
     st.title("Datavisualisation du Département Marketing")
     st.info("### Statistiques pour le département Marketing")
     # Sélection de la visualisation
-    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les Newsletters", "2", "3"])
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les Newsletters", "How We Met", "3"])
     # Affichage du nombre d'experts inscrits
     if selected_visualization == "Les Newsletters":
         st.title("Qui sont nos abonnés")
@@ -174,8 +175,28 @@ def marketing_page():
         ax.pie(type_counts, labels=type_counts.index, autopct='%1.1f%%', startangle=90, colors=colors, textprops={'fontsize': 4})
         ax.axis('equal')  
         st.pyplot(fig)
-    if selected_visualization == "2":
-        st.write('Visualisations a venir')
+    if selected_visualization == "How We Met":
+        st.title("How We Met")
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+        dfpro = pd.read_excel(excel_file_path, sheet_name='Collection profile (type compan')
+        dfprofile = pd.DataFrame(dfpro)
+        # Group by "howWeMet" and calculate the percentage
+        dfprofile = dfprofile['howWeMet'].value_counts(normalize=True).reset_index()
+        dfprofile.columns = ['howWeMet', 'Percentage']
+
+        # Convert the percentage to percentage format
+        dfprofile['Percentage'] = dfprofile['Percentage'] * 100
+
+        # Create a pie chart
+        fig, ax = plt.subplots()
+        ax.pie(dfprofile['Percentage'], labels=dfprofile['howWeMet'], autopct='%1.1f%%', startangle=25, colors=plt.cm.Paired.colors, textprops={'fontsize': 6})
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+        # Display the pie chart in Streamlit
+ 
+        st.pyplot(fig)
+
 
     if selected_visualization == "3":
         st.write('Visualisations a venir')
@@ -186,6 +207,7 @@ def technique_page():
     # Votre contenu pour le département Technique ici
 
 def direction_page():
+    
     st.title("Datavisualisation du Département Diréction")
     st.info("### Statistiques pour le Département Diréction")
     selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Les prix", "2", "3"])
@@ -227,13 +249,13 @@ def direction_page():
 
         # Graphique pour les prix moyens journaliers
         sns.boxplot(y=daily_prices, ax=axs[0], color ='#9a02c6')
-        axs[0].set_title('Prix moyens journaliers')
-        axs[0].set_ylabel('Prix (€)')
+        axs[0].set_title('Prix moyens journaliers', fontsize=16)
+        axs[0].set_ylabel('Prix (€)', fontsize=16)
         
         # Graphique pour les prix moyens horaires
         sns.boxplot(y=hourly_prices, ax=axs[1], color ='#9a02c6')
-        axs[1].set_title('Prix moyens horaires')
-        axs[1].set_ylabel('Prix (€)')
+        axs[1].set_title('Prix moyens horaires', fontsize=16)
+        axs[1].set_ylabel('Prix (€)', fontsize=16)
 
         # Afficher les graphiques
         st.pyplot(fig)
@@ -243,8 +265,131 @@ def direction_page():
 def commerce_page():
     st.title("Datavisualisation du Département Commerce")
     st.info("### Statistiques pour le Département Commerce")
-    # Votre contenu pour le département Commerce ici
+    selected_visualization = st.selectbox("Sélectionnez la visualisation :", ["Nos missions", "Nos missions BIS", "3"])
+    # Affichage du nombre d'experts inscrits
+    if selected_visualization == "Nos missions":
+        st.title("Localisation de nos missions")
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
 
+        # Création du répertoire ville-coordonnées géographiques
+        def create_city_coordinates_map(df_expert):
+            city_coords_map = {}
+            for _, row in df_expert.iterrows():
+                if pd.notna(row['location']) and pd.notna(row['geo']):
+                    city = str(row['location']).split(',')[0].strip()
+                    try:
+                        geo_data = json.loads(row['geo'])
+                        lat = geo_data.get('latitude')
+                        lon = geo_data.get('longitude')
+
+                        if lat and lon:
+                            city_coords_map[city] = (lat, lon)
+                    except json.JSONDecodeError:
+                        continue
+            return city_coords_map
+
+        # Charger les données des experts
+        df_expert = pd.read_excel(excel_file_path, sheet_name='Collection profile (type expert')
+        city_coords_map = create_city_coordinates_map(df_expert)
+
+        # Enrichissement des données d'intervention
+        def enrich_intervention_data(df_intervention, city_coords_map):
+            df_intervention['geo'] = df_intervention['localisation'].apply(lambda x: city_coords_map.get(x, (None, None)))
+            return df_intervention
+
+        # Charger et enrichir les données d'intervention
+        df_intervention = pd.read_excel(excel_file_path, sheet_name='Collection intervention')
+        df_intervention = enrich_intervention_data(df_intervention, city_coords_map)
+
+        # Création de la carte
+        def create_map(data, city_coords_map, map_type='missions'):
+            print("Type de 'data':", type(data))  # Pour comprendre la structure de 'data'
+            print("Exemple de valeurs dans 'data':", list(data)[:5])  # Afficher quelques valeurs
+
+            m = folium.Map(location=[46.2276, 2.2137], zoom_start=6)
+
+            if isinstance(data, dict):
+                data_values = list(data.values())
+                max_value = max(data_values) if data_values else 1
+            elif isinstance(data, pd.Series):
+                max_value = data.max()
+            else:
+                raise TypeError("Type inattendu pour 'data'")
+
+            for city, value in data.items():
+                lat, lon = city_coords_map.get(city, (None, None))
+                if lat and lon and value:
+                    radius = min_radius + (max_radius - min_radius) * (value / max_value)
+                    folium.CircleMarker(
+                        location=[lat, lon],
+                        radius=radius,
+                        popup=f'{city}: {value}',
+                        color='red',
+                        fill=True,
+                        fill_color='red'
+                    ).add_to(m)
+
+            return m
+
+
+        # Affichage de la carte dans Streamlit
+        def show_map_in_streamlit():
+            selected_map_type = st.selectbox('Choisir le type de visualisation', ['missions', 'hours'])
+            df_intervention['hours_planned'] = pd.to_numeric(df_intervention['hours_planned'], errors='coerce')
+            total_hours_per_city = df_intervention.groupby('localisation')['hours_planned'].sum()
+
+            if selected_map_type == 'missions':
+                missions_count_per_city = df_intervention.groupby('localisation')['_id'].nunique()
+                map_missions = create_map(missions_count_per_city, city_coords_map, map_type='missions')
+                folium_static(map_missions)
+
+            elif selected_map_type == 'hours':
+                total_hours_per_city = df_intervention.groupby('localisation')['hours_planned'].sum()
+                map_hours = create_map(total_hours_per_city, city_coords_map, map_type='hours')
+                folium_static(map_hours)
+
+
+        show_map_in_streamlit()
+    if selected_visualization == "Nos missions BIS":
+
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        excel_file_path = os.path.join(script_directory, 'data', 'Akigora_data2.xlsx')
+
+        # Charger les données d'intervention
+        df_intervention = pd.read_excel(excel_file_path, sheet_name='Collection intervention')
+        df_intervention['hours_planned'] = pd.to_numeric(df_intervention['hours_planned'], errors='coerce')
+
+        # Calculer le nombre total de missions et d'heures par ville
+        missions_count_per_city = df_intervention.groupby('localisation')['_id'].nunique()
+        total_hours_per_city = df_intervention.groupby('localisation')['hours_planned'].sum()
+
+        top_10_missions = missions_count_per_city.nlargest(10)
+        top_10_hours = total_hours_per_city.nlargest(10)
+        cadre_style = """
+        <style>
+            .dataframe-cadre {
+                border: 2px solid #02A865;
+                border-radius: 5px;
+                padding: 10px;
+                margin: 10px 0;
+                color: #02A865;
+            }
+        </style>
+        """
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### Top 10 villes par nombre de missions")
+            for city, count in top_10_missions.items():
+                st.markdown(f"<div style='color: #02A865;'><b>{city}</b>: {count} missions</div>", unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("### Top 10 villes par heures totales")
+            for city, hours in top_10_hours.items():
+                st.markdown(f"<div style='color: #02A865;'><b>{city}</b>: {hours:.2f} heures</div>", unsafe_allow_html=True)
+
+
+ 
 
 def home_page():
     st.title("Bienvenue sur votre Dashboard AKIGORA")
@@ -267,8 +412,6 @@ def home_page():
     
     # Utiliser une disposition de colonnes pour aligner horizontalement les boutons
     col1, col2, col3, col4, col5 = st.columns(5)
-
-    # Boutons pour chaque département avec des icônes
 
 
     # Cases pour chaque département avec des icônes et couleur de fond
